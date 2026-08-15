@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- CFBundleName is the label macOS shows in System Settings > Privacy & Security >
+	     Automation, under this binary's entry for controlling Shortcuts Events. -->
+	<key>CFBundleName</key>
+	<string>apple-shortcuts-mcp</string>
+	<key>CFBundleIdentifier</key>
+	<string>codes.eneko.apple-shortcuts-mcp</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+
+	<!-- Shortcuts has no framework a separate process can call: WorkflowKit is private
+	     and App Intents only points outward. The only supported route is Apple events to
+	     "Shortcuts Events", which need this key. Name verified against the tccd binary on
+	     macOS 26.5. -->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Lets Claude list and run the shortcuts you allow, by controlling Shortcuts Events through this local MCP server.</string>
+</dict>
+</plist>

@@ -1,0 +1,58 @@
+{
+  "manifest_version": "0.3",
+  "name": "apple-shortcuts-mcp",
+  "display_name": "Apple Shortcuts",
+  "version": "1.0.0",
+  "description": "Run your Shortcuts from Claude, through the Shortcuts Events helper",
+  "long_description": "A local MCP server written in Swift that lets Claude list and run the shortcuts you have already built.\n\nIt goes through “Shortcuts Events”, the faceless helper app macOS ships for exactly this, so a shortcut runs in the background without the Shortcuts app taking over the screen, and its result comes straight back. Input is passed as a typed Apple event parameter, never spliced into a command line, so there is no text for a quote or an apostrophe to break.\n\nPlug and play: there is nothing to configure. The whole Shortcuts library is listable and runnable; the only guard is run_shortcut's own permission switch below — set it to \"ask\" to approve every run by hand, or \"prohibit\" to turn it off entirely.\n\nTwo things no API on macOS can do, so this server cannot either: enumerate the action library, and install a shortcut. Both are done by hand in the Shortcuts app.\n\nNot affiliated with or endorsed by Apple Inc.",
+  "author": {
+    "name": "eneko-codes",
+    "url": "https://github.com/eneko-codes"
+  },
+  "homepage": "https://github.com/eneko-codes/apple-shortcuts-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eneko-codes/apple-shortcuts-mcp"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": [
+    "shortcuts",
+    "automation",
+    "apple events",
+    "macos"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/apple-shortcuts-mcp",
+    "mcp_config": {
+      "command": "${__dirname}/server/apple-shortcuts-mcp",
+      "args": [],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "shortcuts_status",
+      "description": "Reports whether this server may control Shortcuts. Says exactly what to enable and where if permission is missing."
+    },
+    {
+      "name": "shortcuts_list",
+      "description": "Lists the shortcuts this server can see, with their folder, whether they take input, and how many actions each contains. Folders are named in the header, since they are the only grouping the…"
+    },
+    {
+      "name": "shortcut_get",
+      "description": "Returns everything stored about one shortcut: name, id, subtitle, folder, whether it accepts input, and how many actions it has."
+    },
+    {
+      "name": "run_shortcut",
+      "description": "Runs one shortcut through Shortcuts Events — in the background, without opening the Shortcuts app — and returns whatever it outputs."
+    }
+  ],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin"
+    ]
+  }
+}
