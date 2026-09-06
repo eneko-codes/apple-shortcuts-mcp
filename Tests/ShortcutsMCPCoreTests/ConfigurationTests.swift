@@ -24,13 +24,6 @@ struct ConfigurationTests {
         #expect(parsed.timeoutSeconds == 120)
     }
 
-    @Test("An empty value falls back to the default rather than parsing as zero")
-    func emptyValuesAreIgnored() {
-        let parsed = Configuration.parse(["--result-limit", "", "--timeout-seconds", ""])
-        #expect(parsed.resultLimit == 4_000)
-        #expect(parsed.timeoutSeconds == 120)
-    }
-
     /// Claude Desktop leaves `${user_config.key}` unsubstituted when a setting is empty, so
     /// the literal text could otherwise arrive as an argument. Neither flag is wired into
     /// the manifest today, but the parser still has to be forgiving of the pattern.

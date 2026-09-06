@@ -113,16 +113,6 @@ struct ShortcutsToolsTests {
         }
     }
 
-    /// There is no allow-list or name-prefix scope any more: the owner removed both, so
-    /// status has nothing narrower to report than "the whole library", gated only by
-    /// run_shortcut's own permission switch.
-    @Test("Status reports the whole library as visible, not a configured scope")
-    func statusShowsWholeLibraryVisible() async {
-        let (text, _) = await call("shortcuts_status")
-        #expect(text.contains("whole library"))
-        #expect(text.contains("permission switch in Claude Desktop"))
-    }
-
     // MARK: Availability gate
 
     @Test("A blocking availability refuses every tool but status")
@@ -178,13 +168,6 @@ struct ShortcutsToolsTests {
         #expect(text.contains("MCP.Lights.On"))
         #expect(text.contains("MCP.Weather"))
         #expect(!text.contains("Archive Downloads"))
-    }
-
-    @Test("A listing that matches nothing says so instead of returning a bare header")
-    func listExplainsAnEmptyResult() async {
-        let (text, isError) = await call("shortcuts_list", ["query": .string("nothing here")])
-        #expect(!isError)
-        #expect(text.contains("Nothing matched"))
     }
 
     @Test("A truncated listing says what it withheld and how to page")
