@@ -30,6 +30,21 @@ Not affiliated with or endorsed by Apple Inc.
 | `shortcut_get` | read | Full record for one shortcut, by `name` or `id`: name, id, subtitle, folder, whether it accepts input, action count. |
 | `run_shortcut` | **irreversible** | Runs one shortcut through Shortcuts Events, in the background, and returns whatever it outputs. |
 
+## Frameworks and APIs
+
+Everything here is an Apple event sent to `com.apple.shortcuts.events`, the faceless helper
+that runs a shortcut without opening the Shortcuts app.
+
+| Used | For | Reference |
+|---|---|---|
+| ScriptingBridge — `SBApplication`, `SBElementArray` | Every read and write | [ScriptingBridge](https://developer.apple.com/documentation/scriptingbridge) |
+| `AEDeterminePermissionToAutomateTarget` | Checking Automation consent without sending an event | [Apple Events](https://developer.apple.com/documentation/coreservices/apple_events) |
+| `NSAppleEventsUsageDescription` | The consent string macOS shows | [Information Property List](https://developer.apple.com/documentation/bundleresources/information-property-list/nsappleeventsusagedescription) |
+
+The Shortcuts Events dictionary is two classes — `folder` and `shortcut` — and one command,
+`run`. That is the entire surface: there is no command to read a shortcut's actions, and none
+to create or install one, which is why this server cannot do either.
+
 ## The rules worth knowing before you use it
 
 **The contents of a shortcut cannot be read.** No API exposes the actions inside one —
@@ -225,7 +240,7 @@ swift build
 swift test
 ```
 
-41 tests across two suites (`ShortcutsToolsTests`, `ConfigurationTests`), all against
+38 tests across two suites (`ShortcutsToolsTests`, `ConfigurationTests`), all against
 an in-memory fake — nothing is run and nothing in the real Shortcuts library is
 touched. See `CLAUDE.md`, whose first section is the hard rule that makes that
 non-negotiable: no agent may run a shortcut that exists on this Mac.

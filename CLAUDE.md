@@ -16,6 +16,18 @@ Do not run an existing shortcut the owner made — its contents cannot be inspec
 
 A local MCP server (Swift 6, stdio transport) that lists and runs the shortcuts already installed on this Mac, via Shortcuts Events. No network, no credential, no cloud API, gated by TCC consent for Apple events.
 
+## Apple technology
+
+Everything is an Apple event to `com.apple.shortcuts.events`, the faceless helper that runs a shortcut without opening the Shortcuts app. [ScriptingBridge](https://developer.apple.com/documentation/scriptingbridge) — `SBApplication`, `SBElementArray` — for every read and write; `AEDeterminePermissionToAutomateTarget` ([Apple Events](https://developer.apple.com/documentation/coreservices/apple_events)) to check consent without sending an event; [AppKit](https://developer.apple.com/documentation/appkit) `NSWorkspace`/`NSRunningApplication` to see whether the app is there and running. Consent key: [`NSAppleEventsUsageDescription`](https://developer.apple.com/documentation/bundleresources/information-property-list/nsappleeventsusagedescription).
+
+## Native surface not used
+
+`sdef "/System/Library/CoreServices/Shortcuts Events.app"` is the authority, and it is small: two classes, `folder` and `shortcut`, and one command, `run`.
+
+- There is no command to read a shortcut's actions. The action count is all there is — never infer what a shortcut does from its name.
+- There is no command to create or install a shortcut. Only a person can add one, by opening the file.
+- `/usr/bin/shortcuts` is a separate route this server deliberately does not take.
+
 ## Commands
 
 ```bash
