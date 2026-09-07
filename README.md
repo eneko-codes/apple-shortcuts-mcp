@@ -215,8 +215,8 @@ not do both at once: two registrations under the same display name collide, and
   the binary yourself with your own arguments — see
   [Manual registration](#manual-registration-instead).
 - **Whether this works with nobody logged in at the screen has not been recorded
-  here.** `verification.md` §5 has the manual check (Shortcuts Events over SSH at the
-  login window); run it yourself before relying on this on an always-on Mac.
+  here.** Check it by hand — Shortcuts Events over SSH at the login window — before
+  relying on this on an always-on Mac.
 
 ## Development
 
@@ -231,7 +231,7 @@ touched. See `CLAUDE.md`, whose first section is the hard rule that makes that
 non-negotiable: no agent may run a shortcut that exists on this Mac.
 
 Manual verification against the real Shortcuts library is the owner's job, by hand,
-with MCP Inspector; `verification.md` is the script for it.
+with MCP Inspector.
 
 ## Licence
 
