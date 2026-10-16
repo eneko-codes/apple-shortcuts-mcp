@@ -61,6 +61,5 @@ public enum ShortcutsMCPServer {
         Diagnostics.started(version: version)
         try await server.start(transport: StdioTransport())
         await server.waitUntilCompleted()
-        Diagnostics.stopped()
     }
 }
