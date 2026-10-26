@@ -240,7 +240,7 @@ swift build
 swift test
 ```
 
-38 tests across two suites (`ShortcutsToolsTests`, `ConfigurationTests`), all against
+The tests (`ShortcutsToolsTests`, `ConfigurationTests`) run entirely against
 an in-memory fake — nothing is run and nothing in the real Shortcuts library is
 touched. See `CLAUDE.md`, whose first section is the hard rule that makes that
 non-negotiable: no agent may run a shortcut that exists on this Mac.
