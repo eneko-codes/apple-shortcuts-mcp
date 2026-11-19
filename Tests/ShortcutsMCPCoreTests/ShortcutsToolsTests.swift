@@ -151,6 +151,30 @@ struct ShortcutsToolsTests {
         #expect(text.contains("Folders on this page: Automation, Personal, Work"))
     }
 
+    /// Shortcuts Events reports the action count as the subtitle of a shortcut that has
+    /// none of its own, so printing both said the same thing twice on every line.
+    private static let countAsSubtitle = FakeShortcutsStore(library: [
+        Fixtures.shortcut(id: "sc-one", name: "One", subtitle: "1 action", actionCount: 1),
+        Fixtures.shortcut(id: "sc-many", name: "Many", subtitle: "39 actions", actionCount: 39),
+    ])
+
+    @Test("One action is singular, and a subtitle that only repeats the count is not shown")
+    func listStatesTheCountOnce() async {
+        let (text, isError) = await call("shortcuts_list", store: Self.countAsSubtitle)
+        #expect(!isError, "\(text)")
+        #expect(!text.contains("1 actions"))
+        #expect(text.components(separatedBy: "1 action").count == 2, "\(text)")
+        #expect(text.components(separatedBy: "39 actions").count == 2, "\(text)")
+    }
+
+    @Test("A record does not repeat the count as its subtitle")
+    func getStatesTheCountOnce() async {
+        let (text, _) = await call(
+            "shortcut_get", ["id": .string("sc-many")], store: Self.countAsSubtitle)
+        #expect(!text.contains("subtitle"), "\(text)")
+        #expect(text.contains("39"))
+    }
+
     @Test("query matches name and subtitle, ignoring case")
     func listFiltersByQuery() async {
         let (byName, _) = await call("shortcuts_list", ["query": .string("lights")])
