@@ -44,4 +44,14 @@ struct DiagnosticsTests {
         #expect(first.contains("[4242] started"))
         #expect(first != second)
     }
+
+    @Test("A call that worked is logged too, with its duration and nothing else")
+    func successIsLogged() {
+        #expect(
+            Diagnostics.toolEvent("run_shortcut", error: nil, milliseconds: 12)
+                == "tool=run_shortcut ok ms=12")
+        #expect(
+            Diagnostics.toolEvent("run_shortcut", error: SampleError.plain, milliseconds: 3)
+                .hasSuffix("SampleError.plain ms=3"))
+    }
 }
