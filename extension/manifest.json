@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "apple-shortcuts-mcp",
   "display_name": "Apple Shortcuts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Run your Shortcuts from Claude, through the Shortcuts Events helper",
   "long_description": "A local MCP server written in Swift that lets Claude list and run the shortcuts you have already built.\n\nIt goes through “Shortcuts Events”, the faceless helper app macOS ships for exactly this, so a shortcut runs in the background without the Shortcuts app taking over the screen, and its result comes straight back. Input is passed as a typed Apple event parameter, never spliced into a command line, so there is no text for a quote or an apostrophe to break.\n\nPlug and play: there is nothing to configure. The whole Shortcuts library is listable and runnable; the only guard is run_shortcut's own permission switch below — set it to \"ask\" to approve every run by hand, or \"prohibit\" to turn it off entirely.\n\nTwo things no API on macOS can do, so this server cannot either: enumerate the action library, and install a shortcut. Both are done by hand in the Shortcuts app.\n\nNot affiliated with or endorsed by Apple Inc.",
   "author": {
