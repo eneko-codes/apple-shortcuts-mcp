@@ -44,6 +44,11 @@ typedef NS_ERROR_ENUM(ShortcutsBridgeErrorDomain, ShortcutsBridgeError){
 /// reach it.
 @interface ShortcutsBridge : NSObject
 
+/// Turns the error of a failed Apple event into one of this bridge's cases.
+///
+/// Public so the mapping can be tested with a synthetic `NSError`; no event is sent.
++ (NSError *)translatedError:(NSError *)error;
+
 /// Whether the Shortcuts Events helper exists on this Mac.
 ///
 /// It ships with macOS, so a `NO` here means the install is unusual rather than that the

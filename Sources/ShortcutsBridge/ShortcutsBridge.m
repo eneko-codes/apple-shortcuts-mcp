@@ -87,11 +87,16 @@ static NSString *const ShortcutsEventsBundleIdentifier = @"com.apple.shortcuts.e
 
 /// Translates an OSStatus carried by a failed Apple event into one of this bridge's cases.
 ///
-/// The three that matter are told apart by number because their remedies differ
+/// The four that matter are told apart by number because their remedies differ
 /// completely: a denied grant is fixed in System Settings, a timeout means the shortcut is
-/// probably still running, and anything else is a fault in the shortcut itself.
+/// probably still running, "no such object" means the library moved on since the caller
+/// last looked, and anything else is a fault in the shortcut itself.
 + (NSError *)translatedError:(NSError *)error {
     switch (error.code) {
+        case errAENoSuchObject:
+            return [self errorWithCode:ShortcutsBridgeErrorShortcutNotFound
+                               message:@"The library no longer holds a shortcut with that "
+                                        "identifier."];
         case errAEEventNotPermitted:
         case userCanceledErr:
             return [self errorWithCode:ShortcutsBridgeErrorNotPermitted
@@ -210,7 +215,13 @@ static NSString *const ShortcutsEventsBundleIdentifier = @"com.apple.shortcuts.e
         } mutableCopy];
         // Absent rather than empty for a shortcut at the top level: "no folder" and "a
         // folder whose name is blank" are different facts.
-        NSString *folder = shortcut.folder.name;
+        //
+        // The reference is resolved before its name is read. For a shortcut at the top
+        // level it resolves to nil without an error, whereas asking that nothing for its
+        // name fails with errAENoSuchObject — and since the observer treats any failed
+        // event as the listing failing, one top-level shortcut used to empty the list.
+        id<ShortcutsFolder> container = [(SBObject *)shortcut.folder get];
+        NSString *folder = container.name;
         if (folder.length > 0) entry[@"folder"] = folder;
         [results addObject:entry];
     }

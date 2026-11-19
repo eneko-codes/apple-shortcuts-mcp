@@ -40,6 +40,7 @@ let package = Package(
                 ])
             ]
         ),
-        .testTarget(name: "ShortcutsMCPCoreTests", dependencies: ["ShortcutsMCPCore"]),
+        .testTarget(
+            name: "ShortcutsMCPCoreTests", dependencies: ["ShortcutsMCPCore", "ShortcutsBridge"]),
     ]
 )
