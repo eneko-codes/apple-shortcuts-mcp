@@ -50,6 +50,10 @@ public struct Format: Sendable {
         }
 
         guard !page.isEmpty else {
+            if total > 0 {
+                return header
+                    + "\nOffset \(offset) is past the last match. Call again with a smaller 'offset'."
+            }
             return header
                 + "\nNothing matched. Call again without 'query' or 'folder' to see the whole library."
         }

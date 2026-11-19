@@ -181,6 +181,15 @@ struct ShortcutsToolsTests {
         #expect(second.contains("…3 more · call again with offset=4"))
     }
 
+    @Test("An offset past the end says so instead of claiming nothing matched")
+    func listOffsetPastTheEnd() async {
+        let (text, isError) = await call("shortcuts_list", ["offset": .int(50)])
+        #expect(!isError, "\(text)")
+        #expect(text.contains("7 shortcuts"))
+        #expect(!text.contains("Nothing matched"), "7 shortcuts did match")
+        #expect(text.contains("Offset 50 is past the last match"))
+    }
+
     @Test("An out-of-range limit is clamped rather than refused")
     func listClampsLimit() async {
         let (text, isError) = await call("shortcuts_list", ["limit": .int(99_999)])
