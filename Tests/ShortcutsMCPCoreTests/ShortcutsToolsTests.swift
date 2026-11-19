@@ -407,6 +407,19 @@ struct ShortcutsToolsTests {
         #expect(text.contains("MAY STILL BE RUNNING"))
     }
 
+    /// The extension declares no user_config, so there is no such setting to point at.
+    @Test("No message points at an extension setting that does not exist")
+    func noPhantomSetting() async {
+        var configuration = Configuration()
+        configuration.resultLimit = 200
+        let store = FakeShortcutsStore(outcome: { _ in .text(String(repeating: "x", count: 500)) })
+        let (truncated, _) = await call(
+            "run_shortcut", ["id": .string("sc-weather")], store: store,
+            configuration: configuration)
+        #expect(!truncated.contains("Settings → Extensions"), "\(truncated)")
+        #expect(!ToolError.timedOut(seconds: 50).message.contains("Settings → Extensions"))
+    }
+
     @Test("A store failure is reported rather than swallowed")
     func runReportsStoreFailure() async {
         struct Boom: Error, LocalizedError {

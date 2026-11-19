@@ -4,7 +4,7 @@ import MCP
 public enum ShortcutsMCPServer {
 
     public static let name = "apple-shortcuts-mcp"
-    public static let version = "1.0.2"
+    public static let version = "1.0.3"
 
     /// Returned from `initialize`. It carries what per-tool descriptions cannot state
     /// once: the workflow, the two things this server genuinely cannot do, and where

@@ -19,11 +19,19 @@ public enum Diagnostics {
         emit("fatal", "exiting error=\(kind(of: error))")
     }
 
+    /// Logged as well as failures, because a call that leaves no line cannot be told apart
+    /// from one that never finished.
+    static func toolSucceeded(_ name: String, since start: ContinuousClock.Instant) {
+        emit("info", toolEvent(name, error: nil, milliseconds: milliseconds(since: start)))
+    }
+
     static func toolFailed(_ name: String, error: Error, since start: ContinuousClock.Instant) {
-        emit(
-            "error",
-            "tool=\(toolName(name)) failed error=\(kind(of: error)) ms=\(milliseconds(since: start))"
-        )
+        emit("error", toolEvent(name, error: error, milliseconds: milliseconds(since: start)))
+    }
+
+    static func toolEvent(_ name: String, error: Error?, milliseconds: Int) -> String {
+        let outcome = error.map { "failed error=\(kind(of: $0))" } ?? "ok"
+        return "tool=\(toolName(name)) \(outcome) ms=\(milliseconds)"
     }
 
     /// The client chooses this string, so it is only echoed when it looks like one of our

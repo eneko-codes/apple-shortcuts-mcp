@@ -9,6 +9,7 @@ public enum ToolError: Error, Equatable {
     case notFound(reference: String)
     case ambiguousName(name: String, ids: [String])
     case timedOut(seconds: Int)
+    case shortcutFailed(detail: String)
     case storeFailure(String)
 
     public var message: String {
@@ -69,10 +70,22 @@ public enum ToolError: Error, Equatable {
                 nothing here can stop one once Shortcuts has started it. Check the Shortcuts
                 app before running it again, and do not assume it failed.
 
-                A shortcut that regularly needs longer can have the limit raised in Claude
-                Desktop → Settings → Extensions. A shortcut that waits for a person to tap
-                something will never finish here: Shortcuts Events runs it with no interface
-                to tap.
+                The limit cannot be raised from here: the client itself abandons a request
+                after about a minute. A shortcut that needs longer has to be run from the
+                Shortcuts app to see how it ends. One that waits for a person to tap something will never
+                finish here: Shortcuts Events runs it with no interface to tap.
+                """
+
+        case .shortcutFailed(let detail):
+            return """
+                The shortcut started and then stopped with an error: \(detail)
+
+                IT MAY HAVE DONE PART OF ITS WORK. Its actions run in order and nothing is
+                undone when one fails, so whatever came before the failing action has
+                already happened. Check the Shortcuts app before running it again.
+
+                A shortcut that expects a file, an image or a choice made on screen can fail
+                this way when it is given text or run with no interface.
                 """
 
         case .storeFailure(let detail):

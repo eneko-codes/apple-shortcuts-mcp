@@ -21,7 +21,7 @@ struct ConfigurationTests {
     func defaultsHold() {
         let parsed = Configuration.parse([])
         #expect(parsed.resultLimit == 4_000)
-        #expect(parsed.timeoutSeconds == 120)
+        #expect(parsed.timeoutSeconds == 50)
     }
 
     /// Claude Desktop leaves `${user_config.key}` unsubstituted when a setting is empty, so
@@ -34,7 +34,7 @@ struct ConfigurationTests {
             "--timeout-seconds", "${user_config.timeout_seconds}",
         ])
         #expect(parsed.resultLimit == 4_000)
-        #expect(parsed.timeoutSeconds == 120)
+        #expect(parsed.timeoutSeconds == Configuration().timeoutSeconds)
     }
 
     @Test("Out-of-range numbers are clamped, not refused")
@@ -50,11 +50,20 @@ struct ConfigurationTests {
         #expect(high.timeoutSeconds == Configuration.timeoutRange.upperBound)
     }
 
+    /// MCP clients abandon a request after 60 seconds by default. A wait longer than that
+    /// is never reported: the client answers "Request timed out" first, and the warning that
+    /// the shortcut may still be running never arrives.
+    @Test("The run timeout stays under the client's 60-second request limit")
+    func timeoutFitsTheClient() {
+        #expect(Configuration.timeoutRange.upperBound < 60)
+        #expect(Configuration().timeoutSeconds <= Configuration.timeoutRange.upperBound)
+    }
+
     /// A server that refuses to start over a malformed argument is far harder to diagnose
     /// than one running on a default.
     @Test("Unknown flags and junk values are ignored")
     func unknownFlagsAreIgnored() {
         let parsed = Configuration.parse(["--not-a-flag", "x", "--timeout-seconds", "soon"])
-        #expect(parsed.timeoutSeconds == 120)
+        #expect(parsed.timeoutSeconds == Configuration().timeoutSeconds)
     }
 }

@@ -25,6 +25,7 @@ public struct ShortcutsTools: Sendable {
         let started = ContinuousClock.now
         do {
             let text = try await run(parameters)
+            Diagnostics.toolSucceeded(parameters.name, since: started)
             return .init(content: [.text(text: text, annotations: nil, _meta: nil)], isError: false)
         } catch let error as ToolError {
             Diagnostics.toolFailed(parameters.name, error: error, since: started)

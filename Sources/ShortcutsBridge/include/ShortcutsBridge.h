@@ -12,8 +12,11 @@ typedef NS_ERROR_ENUM(ShortcutsBridgeErrorDomain, ShortcutsBridgeError){
     ShortcutsBridgeErrorNotReachable,
     ShortcutsBridgeErrorNotPermitted,
     ShortcutsBridgeErrorShortcutNotFound,
+    /// The shortcut itself stopped with an error, possibly after some of its actions ran.
     ShortcutsBridgeErrorRunFailed,
     ShortcutsBridgeErrorTimedOut,
+    /// Any other failed event: nothing says the shortcut was at fault.
+    ShortcutsBridgeErrorEventFailed,
 };
 
 /// Everything this project sends to Shortcuts, in Objective-C.
