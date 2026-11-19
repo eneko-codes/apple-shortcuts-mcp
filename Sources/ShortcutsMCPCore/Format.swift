@@ -145,8 +145,7 @@ public struct Format: Sendable {
 
 
                 …cut off at \(resultLimit) characters of \(run.result.count). The rest was
-                not returned; narrow what the shortcut outputs, or raise the limit in Claude
-                Desktop → Settings → Extensions.
+                not returned; narrow what the shortcut outputs to get it.
                 """
         }
         return text

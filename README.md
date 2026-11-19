@@ -74,9 +74,17 @@ for caller text to be spliced into. Shortcuts Events instead takes the shortcut 
 and input as typed Apple event parameters and hands the result straight back, so there
 is no string for a quote or an apostrophe to break and no file to clean up.
 
-**A run is bounded by a timeout, fixed at 120 seconds.** That bounds the wait, not the
+**A run is bounded by a timeout, fixed at 50 seconds.** That bounds the wait, not the
 shortcut: nothing here can stop one once it has started, so giving up on a hung reply is
-the only option when a shortcut is blocked on a dialog or an unreachable device.
+the only option when a shortcut is blocked on a dialog or an unreachable device. It stays
+under the 60 seconds after which MCP clients abandon a request by default; past that the
+client answers "Request timed out" itself and the server's warning that the shortcut may
+still be running never arrives.
+
+**A run that fails partway says so.** Shortcuts Events answers a run that stopped with an
+error with `errOSAScriptError` (-1753). That is reported as the shortcut failing, with the
+message Shortcuts gave, and with the warning that the actions before the failing one have
+already happened.
 
 **Output is text, capped at 4,000 characters, and truncation is reported.** A shortcut
 whose result is an image or a file says that it produced one rather than pretending its
@@ -224,11 +232,13 @@ not do both at once: two registrations under the same display name collide, and
   produces an image or a file reports that it did, not the contents.
 - **`shortcuts_list`'s `query` only matches name and subtitle** — there is nothing
   deeper to search, since a shortcut's internals are not readable in the first place.
-- **The internal timeout (120s) and result limit (4,000 characters) are fixed in this
-  packaging.** `Configuration` still accepts `--result-limit` and `--timeout-seconds`
-  flags, but the extension's `mcp_config.args` is empty, so they only apply if you run
-  the binary yourself with your own arguments — see
-  [Manual registration](#manual-registration-instead).
+- **The internal timeout (50s) and result limit (4,000 characters) are fixed in this
+  packaging.** A shortcut that needs longer than about a minute still starts, but its
+  result cannot come back here whatever the server waits, because the client abandons
+  the request first. `Configuration` still accepts `--result-limit` and
+  `--timeout-seconds` flags (the latter capped at 50), but the extension's
+  `mcp_config.args` is empty, so they only apply if you run the binary yourself with your
+  own arguments — see [Manual registration](#manual-registration-instead).
 - **Whether this works with nobody logged in at the screen has not been recorded
   here.** Check it by hand — Shortcuts Events over SSH at the login window — before
   relying on this on an always-on Mac.

@@ -20,12 +20,16 @@ public struct Configuration: Sendable, Equatable {
     /// Not a limit on the shortcut — nothing can stop it once started — but on the wait.
     /// Without one, a shortcut blocked on a dialog or an unreachable device would hang the
     /// server for the rest of the session with no diagnostic at all.
-    public var timeoutSeconds: Int = 120
+    ///
+    /// Kept under the 60 seconds after which MCP clients abandon a request by default.
+    /// Past that the client answers "Request timed out" on its own, so the server's report
+    /// — that the shortcut may still be running — never reaches anyone.
+    public var timeoutSeconds: Int = 50
 
     public init() {}
 
     public static let resultLimitRange = 200...100_000
-    public static let timeoutRange = 5...600
+    public static let timeoutRange = 5...50
 
     /// Bounds on `shortcuts_list`. Not configurable: a Shortcuts library is small enough
     /// that a fixed ceiling has never needed tuning, and a setting nobody changes is a

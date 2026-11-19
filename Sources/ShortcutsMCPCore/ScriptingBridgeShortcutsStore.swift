@@ -49,10 +49,13 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
 
     /// The bridge reports failures as `NSError`; the tool layer speaks `ToolError`.
     ///
-    /// Three codes are worth telling apart because their remedies differ completely: a
-    /// denied grant is fixed in System Settings, a timeout means the shortcut is probably
-    /// still running, and a missing shortcut means the library moved on since the listing.
-    private func translate(_ error: Error, identifier: String, timeoutSeconds: Int) -> ToolError {
+    /// The codes worth telling apart are the ones whose remedies differ: a denied grant is
+    /// fixed in System Settings, a timeout means the shortcut is probably still running, a
+    /// missing shortcut means the library moved on since the listing, and a failed run may
+    /// have done part of its work.
+    static func toolError(for error: Error, identifier: String, timeoutSeconds: Int)
+        -> ToolError
+    {
         let failure = error as NSError
         guard failure.domain == ShortcutsBridgeErrorDomain else {
             return .storeFailure(failure.localizedDescription)
@@ -66,6 +69,8 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
             return .timedOut(seconds: timeoutSeconds)
         case ShortcutsBridgeError.shortcutNotFound.rawValue:
             return .notFound(reference: identifier)
+        case ShortcutsBridgeError.runFailed.rawValue:
+            return .shortcutFailed(detail: failure.localizedDescription)
         default:
             return .storeFailure(failure.localizedDescription)
         }
@@ -80,7 +85,7 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
         do {
             raw = try ShortcutsBridge.shortcuts()
         } catch {
-            throw translate(error, identifier: "", timeoutSeconds: 0)
+            throw Self.toolError(for: error, identifier: "", timeoutSeconds: 0)
         }
 
         return raw.compactMap { entry in
@@ -107,7 +112,7 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
             raw = try ShortcutsBridge.runShortcut(
                 withIdentifier: id, input: input, timeoutSeconds: timeoutSeconds)
         } catch {
-            throw translate(error, identifier: id, timeoutSeconds: timeoutSeconds)
+            throw Self.toolError(for: error, identifier: id, timeoutSeconds: timeoutSeconds)
         }
 
         return ShortcutRun(

@@ -49,6 +49,10 @@
 NSString *const ShortcutsBridgeErrorDomain = @"codes.eneko.apple-shortcuts-mcp";
 static NSString *const ShortcutsEventsBundleIdentifier = @"com.apple.shortcuts.events";
 
+/// `errOSAScriptError` from OpenScripting's OSA.h, spelled out so as not to link Carbon
+/// for one constant. Shortcuts Events answers a run that stopped with an error with it.
+static const NSInteger ShortcutsScriptError = -1753;
+
 #pragma mark - Event failure capture
 
 /// Captures the failure of an Apple event instead of letting Scripting Bridge swallow it.
@@ -87,12 +91,23 @@ static NSString *const ShortcutsEventsBundleIdentifier = @"com.apple.shortcuts.e
 
 /// Translates an OSStatus carried by a failed Apple event into one of this bridge's cases.
 ///
-/// The four that matter are told apart by number because their remedies differ
-/// completely: a denied grant is fixed in System Settings, a timeout means the shortcut is
-/// probably still running, "no such object" means the library moved on since the caller
-/// last looked, and anything else is a fault in the shortcut itself.
+/// Told apart by number because their remedies differ completely: a denied grant is fixed
+/// in System Settings, a timeout means the shortcut is probably still running, "no such
+/// object" means the library moved on since the caller last looked, and a script error
+/// means the shortcut ran and one of its actions failed. Anything else is not blamed on
+/// the shortcut.
 + (NSError *)translatedError:(NSError *)error {
     switch (error.code) {
+        case ShortcutsScriptError: {
+            // Scripting Bridge carries the target's own explanation under "ErrorString"
+            // (SBApplicationDelegate); for Shortcuts Events that is the failing action's.
+            id detail = error.userInfo[@"ErrorString"];
+            return [self errorWithCode:ShortcutsBridgeErrorRunFailed
+                               message:[detail isKindOfClass:NSString.class] &&
+                                               [detail length] > 0
+                                           ? detail
+                                           : @"The shortcut stopped with an error."];
+        }
         case errAENoSuchObject:
             return [self errorWithCode:ShortcutsBridgeErrorShortcutNotFound
                                message:@"The library no longer holds a shortcut with that "
@@ -109,7 +124,7 @@ static NSString *const ShortcutsEventsBundleIdentifier = @"com.apple.shortcuts.e
             return [self errorWithCode:ShortcutsBridgeErrorNotReachable
                                message:@"Shortcuts Events could not be reached."];
         default:
-            return [self errorWithCode:ShortcutsBridgeErrorRunFailed
+            return [self errorWithCode:ShortcutsBridgeErrorEventFailed
                                message:error.localizedDescription
                                            ?: @"Shortcuts Events reported a failure."];
     }
