@@ -38,6 +38,22 @@ public struct Format: Sendable {
             .joined(separator: ", ")
     }
 
+    static func actionCount(_ count: Int) -> String {
+        count == 1 ? "1 action" : "\(count) actions"
+    }
+
+    /// The subtitle, unless it only restates the action count.
+    ///
+    /// Shortcuts Events reports "39 actions" as the subtitle of a shortcut that has none of
+    /// its own. It is matched as the count followed by a single word rather than as English
+    /// text, because the word is the system's and follows its language.
+    static func subtitle(of shortcut: ShortcutRecord) -> String? {
+        guard let subtitle = shortcut.subtitle else { return nil }
+        let words = subtitle.split(whereSeparator: \.isWhitespace)
+        let restatesCount = words.count == 2 && Int(words[0]) == shortcut.actionCount
+        return restatesCount ? nil : subtitle
+    }
+
     // MARK: Tools
 
     public func shortcutList(_ page: [ShortcutRecord], total: Int, offset: Int) -> String {
@@ -67,9 +83,9 @@ public struct Format: Sendable {
             if folderWidth > 0 {
                 line += "  " + Self.pad(shortcut.folder ?? "—", to: folderWidth)
             }
-            line += "  " + Self.pad("\(shortcut.actionCount) actions", to: 12)
+            line += "  " + Self.pad(Self.actionCount(shortcut.actionCount), to: 12)
             line += shortcut.acceptsInput ? "  takes input" : "             "
-            if let subtitle = shortcut.subtitle, !subtitle.isEmpty {
+            if let subtitle = Self.subtitle(of: shortcut), !subtitle.isEmpty {
                 line += "  " + Self.oneLine(subtitle)
             }
             lines.append(line + "  id=\(shortcut.id)")
@@ -85,7 +101,7 @@ public struct Format: Sendable {
     public func detail(_ shortcut: ShortcutRecord) -> String {
         let rows: [(String, String?)] = [
             ("folder", shortcut.folder ?? "(top level)"),
-            ("subtitle", shortcut.subtitle),
+            ("subtitle", Self.subtitle(of: shortcut)),
             ("input", shortcut.acceptsInput ? "accepts input" : "takes no input"),
             ("actions", "\(shortcut.actionCount)"),
             ("id", shortcut.id),
