@@ -1,10 +1,9 @@
 import Foundation
-import MCP
 
 public enum ShortcutsMCPServer {
 
     public static let name = "apple-shortcuts-mcp"
-    public static let version = "1.0.3"
+    public static let version = "1.0.4"
 
     /// Returned from `initialize`. It carries what per-tool descriptions cannot state
     /// once: the workflow, the two things this server genuinely cannot do, and where
@@ -43,23 +42,19 @@ public enum ShortcutsMCPServer {
     public static func run(
         store: any ShortcutsStore = ScriptingBridgeShortcutsStore(),
         configuration: Configuration = Configuration()
-    ) async throws {
-        let tools = ShortcutsTools(store: store, configuration: configuration)
-        let server = Server(
-            name: name,
-            version: version,
-            instructions: instructions,
-            capabilities: .init(tools: .init(listChanged: false))
-        )
-
-        await server.withMethodHandler(ListTools.self) { _ in .init(tools: ToolCatalog.all(configuration)) }
-        await server.withMethodHandler(CallTool.self) { await tools.handle($0) }
-
-        // The default StdioTransport logger is a no-op handler. Leave it that way: a logger
-        // writing to stdout would interleave with the JSON-RPC stream and break every
-        // response after the first log line.
+    ) async {
         Diagnostics.started(version: version)
-        try await server.start(transport: StdioTransport())
-        await server.waitUntilCompleted()
+        await serveStandardStreams(
+            handler: handler(
+                tools: ShortcutsTools(store: store, configuration: configuration),
+                configuration: configuration))
+    }
+
+    public static func handler(
+        tools: ShortcutsTools, configuration: Configuration = Configuration()
+    ) -> MCPHandler {
+        MCPHandler(
+            name: name, version: version, instructions: instructions,
+            catalog: ToolCatalog.all(configuration), tools: tools)
     }
 }

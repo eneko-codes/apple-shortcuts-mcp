@@ -1,5 +1,4 @@
 import Foundation
-import MCP
 
 /// Routes a `tools/call` to the store and renders the answer.
 ///
@@ -10,7 +9,7 @@ import MCP
 /// This is also where a `name` or `id` argument resolves to one shortcut. A store
 /// implementation only walks the whole library; matching a name, picking between two
 /// shortcuts that share one, and running by id are answered once, here.
-public struct ShortcutsTools: Sendable {
+public struct ShortcutsTools: ToolHandler {
     private let store: any ShortcutsStore
     private let configuration: Configuration
     private let format: Format
@@ -21,28 +20,23 @@ public struct ShortcutsTools: Sendable {
         self.format = Format()
     }
 
-    public func handle(_ parameters: CallTool.Parameters) async -> CallTool.Result {
+    public func handle(_ parameters: ToolCall) async -> ToolOutput {
         let started = ContinuousClock.now
         do {
             let text = try await run(parameters)
             Diagnostics.toolSucceeded(parameters.name, since: started)
-            return .init(content: [.text(text: text, annotations: nil, _meta: nil)], isError: false)
+            return ToolOutput(text: text, isError: false)
         } catch let error as ToolError {
             Diagnostics.toolFailed(parameters.name, error: error, since: started)
-            return .init(
-                content: [.text(text: error.message, annotations: nil, _meta: nil)], isError: true)
+            return ToolOutput(text: error.message, isError: true)
         } catch {
             Diagnostics.toolFailed(parameters.name, error: error, since: started)
-            return .init(
-                content: [
-                    .text(
-                        text: ToolError.storeFailure(error.localizedDescription).message,
-                        annotations: nil, _meta: nil)
-                ], isError: true)
+            return ToolOutput(
+                text: ToolError.storeFailure(error.localizedDescription).message, isError: true)
         }
     }
 
-    private func run(_ parameters: CallTool.Parameters) async throws -> String {
+    private func run(_ parameters: ToolCall) async throws -> String {
         let arguments = Arguments(parameters.arguments)
 
         if parameters.name == ToolCatalog.statusName {
