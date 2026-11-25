@@ -48,7 +48,11 @@ public protocol ShortcutsStore: Sendable {
     /// There is nothing to push a filter into even if a store wanted to: the dictionary
     /// offers elements and properties, and no query language at all. Narrowing by `query`
     /// or `folder` happens in the tool layer, once, against what this returns.
-    func shortcuts() async throws -> [ShortcutRecord]
+    ///
+    /// `timeBudgetSeconds` bounds the read. A library not read in full within it is an
+    /// error, never a shorter list: a name resolved against part of the library could miss
+    /// a second shortcut of the same name and run the wrong one.
+    func shortcuts(timeBudgetSeconds: Int) async throws -> [ShortcutRecord]
 
     /// Runs one shortcut, addressed by id.
     ///

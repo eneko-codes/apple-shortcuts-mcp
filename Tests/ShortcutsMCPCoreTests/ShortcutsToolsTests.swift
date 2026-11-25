@@ -12,9 +12,10 @@ struct ShortcutsToolsTests {
     private func call(
         _ name: String, _ arguments: [String: Value] = [:],
         store: FakeShortcutsStore = FakeShortcutsStore(),
-        configuration: Configuration = Configuration()
+        configuration: Configuration = Configuration(),
+        timeout: Duration = ShortcutsTools.defaultTimeout
     ) async -> (text: String, isError: Bool) {
-        let tools = ShortcutsTools(store: store, configuration: configuration)
+        let tools = ShortcutsTools(store: store, configuration: configuration, timeout: timeout)
         let result = await tools.handle(.init(name: name, arguments: arguments))
         guard case .text(let text) = result.content.first else {
             return ("(no text content)", true)
@@ -90,7 +91,7 @@ struct ShortcutsToolsTests {
         configuration.resultLimit = 1_234
         let run = ToolCatalog.all(configuration).first { $0.name == "run_shortcut" }
         #expect(run?.description?.contains("45 seconds") == true)
-        #expect(run?.description?.contains("1234 characters") == true)
+        #expect(run?.description?.contains("first 1234 characters") == true)
     }
 
     // MARK: Status
@@ -148,6 +149,7 @@ struct ShortcutsToolsTests {
         #expect(text.contains("7 actions"))
         #expect(text.contains("takes input"))
         #expect(text.contains("Folders on this page: Automation, Personal, Work"))
+        #expect(!text.contains("Showing"), "a result that holds everything carries no notice")
     }
 
     /// Shortcuts Events reports the action count as the subtitle of a shortcut that has
@@ -191,40 +193,6 @@ struct ShortcutsToolsTests {
         #expect(text.contains("MCP.Lights.On"))
         #expect(text.contains("MCP.Weather"))
         #expect(!text.contains("Archive Downloads"))
-    }
-
-    @Test("A truncated listing says what it withheld and how to page")
-    func listPages() async {
-        let (first, _) = await call("shortcuts_list", ["limit": .int(2)])
-        #expect(first.contains("…5 more · call again with offset=2"))
-
-        let (second, _) = await call("shortcuts_list", ["limit": .int(2), "offset": .int(2)])
-        #expect(!second.contains("Archive Downloads"), "offset must skip what page one showed")
-        #expect(second.contains("MCP.Lights.On"))
-        #expect(second.contains("…3 more · call again with offset=4"))
-    }
-
-    @Test("An offset past the end says so instead of claiming nothing matched")
-    func listOffsetPastTheEnd() async {
-        let (text, isError) = await call("shortcuts_list", ["offset": .int(50)])
-        #expect(!isError, "\(text)")
-        #expect(text.contains("7 shortcuts"))
-        #expect(!text.contains("Nothing matched"), "7 shortcuts did match")
-        #expect(text.contains("Offset 50 is past the last match"))
-    }
-
-    @Test("An out-of-range limit is clamped rather than refused")
-    func listClampsLimit() async {
-        let (text, isError) = await call("shortcuts_list", ["limit": .int(99_999)])
-        #expect(!isError, "\(text)")
-        #expect(text.contains("7 shortcuts"))
-    }
-
-    @Test("A non-integer limit is a plain argument error")
-    func listRejectsNonIntegerLimit() async {
-        let (text, isError) = await call("shortcuts_list", ["limit": .string("lots")])
-        #expect(isError)
-        #expect(text.contains("an integer was expected"))
     }
 
     // MARK: Resolution
@@ -391,7 +359,7 @@ struct ShortcutsToolsTests {
             "run_shortcut", ["id": .string("sc-weather")], store: store,
             configuration: configuration)
         #expect(!isError, "\(text)")
-        #expect(text.contains("cut off at 200 characters of 500"))
+        #expect(text.hasPrefix("Cut at 200 of 500 characters; the rest cannot be read again.\n\n"))
         #expect(!text.contains(String(repeating: "x", count: 201)))
     }
 

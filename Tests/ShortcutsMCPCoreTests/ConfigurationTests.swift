@@ -20,7 +20,7 @@ struct ConfigurationTests {
     @Test("No arguments gives the documented defaults")
     func defaultsHold() {
         let parsed = Configuration.parse([])
-        #expect(parsed.resultLimit == 4_000)
+        #expect(parsed.resultLimit == Configuration.defaultResultLimit)
         #expect(parsed.timeoutSeconds == 50)
     }
 
@@ -33,7 +33,7 @@ struct ConfigurationTests {
             "--result-limit", "${user_config.result_limit}",
             "--timeout-seconds", "${user_config.timeout_seconds}",
         ])
-        #expect(parsed.resultLimit == 4_000)
+        #expect(parsed.resultLimit == Configuration.defaultResultLimit)
         #expect(parsed.timeoutSeconds == Configuration().timeoutSeconds)
     }
 

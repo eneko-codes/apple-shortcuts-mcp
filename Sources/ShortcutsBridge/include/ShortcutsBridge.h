@@ -17,6 +17,8 @@ typedef NS_ERROR_ENUM(ShortcutsBridgeErrorDomain, ShortcutsBridgeError){
     ShortcutsBridgeErrorTimedOut,
     /// Any other failed event: nothing says the shortcut was at fault.
     ShortcutsBridgeErrorEventFailed,
+    /// Reading the library used up its time budget before every shortcut was read.
+    ShortcutsBridgeErrorScanStopped,
 };
 
 /// Everything this project sends to Shortcuts, in Objective-C.
@@ -62,9 +64,16 @@ typedef NS_ERROR_ENUM(ShortcutsBridgeErrorDomain, ShortcutsBridgeError){
 /// `{name, id, subtitle, folder, acceptsInput, actionCount}`.
 ///
 /// `folder` is absent for a shortcut that sits at the top level. The whole library is
-/// fetched in one event because there is no query language to push a filter into: the
-/// dictionary offers elements and properties, nothing else. Filtering happens in Swift.
-+ (nullable NSArray<NSDictionary<NSString *, id> *> *)shortcutsWithError:(NSError **)error;
+/// read, because there is no query language to push a filter into: the dictionary offers
+/// elements and properties, nothing else. Filtering happens in Swift.
+///
+/// `timeBudgetSeconds` bounds both one event and the walk as a whole. A library that is
+/// not read in full within it fails with `ShortcutsBridgeErrorScanStopped` rather than
+/// returning the shortcuts read so far: resolving a name against a partial library could
+/// miss a second shortcut of the same name and run the wrong one.
++ (nullable NSArray<NSDictionary<NSString *, id> *> *)
+    shortcutsWithTimeBudget:(NSInteger)timeBudgetSeconds
+                      error:(NSError **)error;
 
 /// Runs one shortcut by identifier and returns `{result, hasResult}`.
 ///

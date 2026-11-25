@@ -32,4 +32,9 @@ struct StoreErrorTranslationTests {
         #expect(toolError(.timedOut) == .timedOut(seconds: 50))
         #expect(toolError(.notPermitted) == .notAvailable(.automationDenied))
     }
+
+    @Test("A library that was not read in time is not blamed on a shortcut")
+    func scanStoppedIsTheLibraryNotRead() {
+        #expect(toolError(.scanStopped) == .libraryNotRead(seconds: 50))
+    }
 }

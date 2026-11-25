@@ -207,14 +207,32 @@ static const NSInteger ShortcutsScriptError = -1753;
 
 #pragma mark - Reads
 
-+ (nullable NSArray<NSDictionary<NSString *, id> *> *)shortcutsWithError:(NSError **)error {
++ (nullable NSArray<NSDictionary<NSString *, id> *> *)
+    shortcutsWithTimeBudget:(NSInteger)timeBudgetSeconds
+                      error:(NSError **)error {
     ShortcutsEventObserver *observer = [[ShortcutsEventObserver alloc] init];
     SBApplication<ShortcutsApplication> *application = [self applicationObservedBy:observer
                                                                             error:error];
     if (!application) return nil;
 
+    // Ticks, at 60 to the second. Without a bound one event waits for the framework's own
+    // default, and a Shortcuts Events that stopped answering would hold the listing for
+    // minutes. A single event cannot outlast the whole budget, so the same number serves.
+    application.timeout = timeBudgetSeconds * 60;
+    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + timeBudgetSeconds;
+
     NSMutableArray<NSDictionary<NSString *, id> *> *results = [NSMutableArray array];
     for (id<Shortcut> shortcut in application.shortcuts) {
+        // Every shortcut costs several events, so a large library is slow in proportion.
+        if (NSProcessInfo.processInfo.systemUptime >= deadline) {
+            application.delegate = nil;
+            if (error) {
+                *error = [self errorWithCode:ShortcutsBridgeErrorScanStopped
+                                     message:@"The library was not read within the time "
+                                              "budget."];
+            }
+            return nil;
+        }
         NSString *name = shortcut.name;
         NSString *identifier = [shortcut id];
         // A shortcut with no identifier cannot be run later, so listing it would only
