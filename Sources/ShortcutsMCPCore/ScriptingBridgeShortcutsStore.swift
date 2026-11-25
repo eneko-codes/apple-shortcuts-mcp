@@ -67,6 +67,8 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
             return .notAvailable(.notInstalled)
         case ShortcutsBridgeError.timedOut.rawValue:
             return .timedOut(seconds: timeoutSeconds)
+        case ShortcutsBridgeError.scanStopped.rawValue:
+            return .libraryNotRead(seconds: timeoutSeconds)
         case ShortcutsBridgeError.shortcutNotFound.rawValue:
             return .notFound(reference: identifier)
         case ShortcutsBridgeError.runFailed.rawValue:
@@ -78,14 +80,19 @@ public struct ScriptingBridgeShortcutsStore: ShortcutsStore {
 
     // MARK: Library
 
-    public func shortcuts() async throws -> [ShortcutRecord] {
+    public func shortcuts(timeBudgetSeconds: Int) async throws -> [ShortcutRecord] {
         try guardAvailability()
 
         let raw: [[String: Any]]
         do {
-            raw = try ShortcutsBridge.shortcuts()
+            raw = try ShortcutsBridge.shortcuts(withTimeBudget: timeBudgetSeconds)
         } catch {
-            throw Self.toolError(for: error, identifier: "", timeoutSeconds: 0)
+            let translated = Self.toolError(
+                for: error, identifier: "", timeoutSeconds: timeBudgetSeconds)
+            // An event that timed out while listing is a library not read, not a shortcut
+            // that did not finish.
+            if case .timedOut = translated { throw ToolError.libraryNotRead(seconds: timeBudgetSeconds) }
+            throw translated
         }
 
         return raw.compactMap { entry in

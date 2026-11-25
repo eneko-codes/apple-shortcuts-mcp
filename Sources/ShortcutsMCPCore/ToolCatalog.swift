@@ -38,8 +38,12 @@ public enum ToolCatalog {
     /// Desktop's schema sanitiser drops a property outright when its `type` is a union and
     /// hands the model a bare `{}` in its place, which makes the argument unusable. An
     /// optional field is expressed by leaving it out of `required` and nothing else.
-    private static func string(_ description: String) -> Value {
-        .object(["type": .string("string"), "description": .string(description)])
+    private static func string(_ description: String, maxLength: Int? = nil) -> Value {
+        var schema: [String: Value] = [
+            "type": .string("string"), "description": .string(description),
+        ]
+        if let maxLength { schema["maxLength"] = .int(maxLength) }
+        return .object(schema)
     }
 
     private static func integer(_ description: String, minimum: Int, maximum: Int, default def: Int)
@@ -86,9 +90,16 @@ public enum ToolCatalog {
         name: listName,
         title: "List shortcuts",
         description: """
-            Lists the shortcuts this server can see, with their folder, whether they take \
-            input, and how many actions each contains. Folders are named in the header, \
-            since they are the only grouping the library has.
+            Returns one page of the shortcuts this server can see, \(Configuration.defaultListLimit) \
+            to a page, ordered by name (ignoring case) and then id: folder, whether it takes \
+            input, how many actions it has, subtitle and id. The first lines of a result say \
+            how many shortcuts match and the offset of the next page; pass limit \
+            (1–\(Configuration.listLimitRange.upperBound)) and offset to read the rest. Name, \
+            folder and subtitle are clipped to \(Configuration.nameWidth), \
+            \(Configuration.folderWidth) and \(Configuration.subtitleWidth) characters in each \
+            row, and the result says so when one was; shortcut_get reads one in full. Folders \
+            on the page are named in the header, since they are the only grouping the library \
+            has.
 
             Shows the whole Shortcuts library — there is no separate allow-list or name \
             filter here. What run_shortcut may actually run is decided by its own \
@@ -96,7 +107,9 @@ public enum ToolCatalog {
 
             This is the only source of names and ids. Call it before shortcut_get or \
             run_shortcut rather than reusing either from earlier in the conversation — the \
-            library changes whenever the owner edits it.
+            library changes whenever the owner edits it. Reading the library takes up to \
+            \(Configuration.scanBudgetSeconds) seconds; a library not read in that time is an \
+            error, not a shorter list.
             """,
         inputSchema: object(properties: [
             "query": string(
@@ -104,12 +117,12 @@ public enum ToolCatalog {
             "folder": string(
                 "Optional folder name. Only shortcuts in that folder are returned."),
             "limit": integer(
-                "Maximum number of shortcuts to return.",
+                "Maximum number of shortcuts to return. A value outside the range is moved to the nearest and the result says so.",
                 minimum: Configuration.listLimitRange.lowerBound,
                 maximum: Configuration.listLimitRange.upperBound,
                 default: Configuration.defaultListLimit),
             "offset": integer(
-                "Skip this many matches; use it to page.",
+                "Number of matching shortcuts to skip; the result names the offset of the next page.",
                 minimum: Configuration.offsetRange.lowerBound,
                 maximum: Configuration.offsetRange.upperBound, default: 0),
         ]),
@@ -121,8 +134,11 @@ public enum ToolCatalog {
         name: getName,
         title: "Full shortcut record",
         description: """
-            Returns everything stored about one shortcut: name, id, subtitle, folder, \
-            whether it accepts input, and how many actions it has.
+            Returns everything stored about one shortcut, in full: name, id, subtitle, \
+            folder, whether it accepts input, and how many actions it has. A record longer \
+            than max_characters (\(Configuration.defaultMaxCharacters) by default, at most \
+            \(Configuration.maxCharactersRange.upperBound)) comes in windows: the first lines \
+            say which characters it holds, and character_offset reads the next.
 
             It CANNOT show what the shortcut does. macOS exposes no API for reading the \
             actions inside a shortcut — not Shortcuts Events, not the command line, not \
@@ -134,6 +150,15 @@ public enum ToolCatalog {
         inputSchema: object(properties: [
             "name": nameProperty,
             "id": idProperty,
+            "character_offset": integer(
+                "Number of characters of the record to skip; the result names the offset of the rest.",
+                minimum: Configuration.characterOffsetRange.lowerBound,
+                maximum: Configuration.characterOffsetRange.upperBound, default: 0),
+            "max_characters": integer(
+                "Most characters of the record to return. A value outside the range is moved to the nearest and the result says so.",
+                minimum: Configuration.maxCharactersRange.lowerBound,
+                maximum: Configuration.maxCharactersRange.upperBound,
+                default: Configuration.defaultMaxCharacters),
         ]),
         annotations: .init(
             readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false)
@@ -160,9 +185,11 @@ public enum ToolCatalog {
                 shortcut that waits for someone to tap something will never finish, because \
                 it runs with no interface.
 
-                Output is returned as text and cut off at \(configuration.resultLimit) \
-                characters. A shortcut whose result is an image or a file reports that it \
-                produced one rather than its contents.
+                Returns the first \(configuration.resultLimit) characters of the output at \
+                most. When it is longer, the first line says how much was cut, and the rest \
+                CANNOT BE READ AGAIN: a second call would run the shortcut a second time. \
+                A shortcut whose result is an image or a file reports that it produced one \
+                rather than its contents.
 
                 \(referenceHelp)
                 """,
@@ -171,10 +198,11 @@ public enum ToolCatalog {
                 "id": idProperty,
                 "input": string(
                     """
-                    Optional text passed to the shortcut as its input. Only text: a file or \
-                    an image cannot be sent from here. A shortcut that takes no input \
-                    ignores it.
-                    """),
+                    Optional text passed to the shortcut as its input, at most \
+                    \(Configuration.inputLimit) characters; longer input is refused and \
+                    nothing is run, never cut. Only text: a file or an image cannot be \
+                    sent from here. A shortcut that takes no input ignores it.
+                    """, maxLength: Configuration.inputLimit),
             ]),
             annotations: .init(
                 readOnlyHint: false,

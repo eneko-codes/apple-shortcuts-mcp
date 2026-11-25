@@ -56,48 +56,86 @@ public struct Format: Sendable {
 
     // MARK: Tools
 
-    public func shortcutList(_ page: [ShortcutRecord], total: Int, offset: Int) -> String {
+    /// `text` as one line of a listing row: at most `width` characters, the last of them
+    /// an ellipsis when it was cut. `clipped` is set when it was.
+    static func clip(_ text: String, to width: Int, clipped: inout Bool) -> String {
+        guard text.count > width else { return text }
+        clipped = true
+        return String(text.prefix(width - 1)) + "…"
+    }
+
+    /// The rows of one page of a listing, with the sentences about what the rows had to
+    /// lose first. `total` is the number of shortcuts that matched, not the page.
+    ///
+    /// Name, folder and subtitle are free text and are clipped to a width in every row;
+    /// the id is never clipped, because a clipped id names nothing.
+    public func shortcutList(_ page: [ShortcutRecord], total: Int, filtered: Bool) -> String {
+        var nameClipped = false
+        var folderClipped = false
+        var subtitleClipped = false
+        func name(_ shortcut: ShortcutRecord) -> String {
+            Self.clip(Self.oneLine(shortcut.name), to: Configuration.nameWidth, clipped: &nameClipped)
+        }
+        func folder(_ shortcut: ShortcutRecord) -> String? {
+            shortcut.folder.map {
+                Self.clip(Self.oneLine($0), to: Configuration.folderWidth, clipped: &folderClipped)
+            }
+        }
+
+        let rows = page.map { (shortcut: $0, name: name($0), folder: folder($0)) }
+
         // Folders are the library's only grouping, so they are named even when the page
         // itself is empty: a caller cannot bound a search by something it cannot see.
-        let folders = Set(page.compactMap(\.folder)).sorted()
-        var header = "\(total) shortcut\(total == 1 ? "" : "s")"
+        let folders = Set(rows.compactMap(\.folder)).sorted()
+        var header = "\(total) shortcut\(total == 1 ? "" : "s"), ordered by name (ignoring case), then id."
         if !folders.isEmpty {
             header += "\nFolders on this page: " + folders.joined(separator: ", ")
         }
 
-        guard !page.isEmpty else {
-            if total > 0 {
-                return header
-                    + "\nOffset \(offset) is past the last match. Call again with a smaller 'offset'."
-            }
-            return header
-                + "\nNothing matched. Call again without 'query' or 'folder' to see the whole library."
-        }
-
-        let nameWidth = page.map(\.name.count).max() ?? 0
-        let folderWidth = page.compactMap(\.folder).map(\.count).max() ?? 0
-
         var lines = [header]
-        for shortcut in page {
-            var line = Self.pad(shortcut.name, to: nameWidth)
-            if folderWidth > 0 {
-                line += "  " + Self.pad(shortcut.folder ?? "—", to: folderWidth)
+        if rows.isEmpty {
+            if total == 0 {
+                lines.append(
+                    filtered
+                        ? "Nothing matched. Call again without 'query' or 'folder' to see the whole library."
+                        : "The library holds no shortcuts.")
             }
-            line += "  " + Self.pad(Self.actionCount(shortcut.actionCount), to: 12)
-            line += shortcut.acceptsInput ? "  takes input" : "             "
-            if let subtitle = Self.subtitle(of: shortcut), !subtitle.isEmpty {
-                line += "  " + Self.oneLine(subtitle)
-            }
-            lines.append(line + "  id=\(shortcut.id)")
+            return lines.joined(separator: "\n")
         }
 
-        let shown = offset + page.count
-        if shown < total {
-            lines.append("…\(total - shown) more · call again with offset=\(shown)")
+        let nameWidth = rows.map(\.name.count).max() ?? 0
+        let folderWidth = rows.compactMap(\.folder).map(\.count).max() ?? 0
+        var notices: [String] = []
+        for row in rows {
+            var line = Self.pad(row.name, to: nameWidth)
+            if folderWidth > 0 {
+                line += "  " + Self.pad(row.folder ?? "—", to: folderWidth)
+            }
+            line += "  " + Self.pad(Self.actionCount(row.shortcut.actionCount), to: 12)
+            line += row.shortcut.acceptsInput ? "  takes input" : "             "
+            if let subtitle = Self.subtitle(of: row.shortcut), !subtitle.isEmpty {
+                line += "  " + Self.clip(
+                    Self.oneLine(subtitle), to: Configuration.subtitleWidth, clipped: &subtitleClipped)
+            }
+            lines.append(line + "  id=\(row.shortcut.id)")
         }
-        return lines.joined(separator: "\n")
+        // Said once per field, and only when a row on this page was in fact clipped.
+        if nameClipped {
+            notices.append(
+                Notice.clipped(field: "Name", width: Configuration.nameWidth, tool: ToolCatalog.getName))
+        }
+        if folderClipped {
+            notices.append(
+                Notice.clipped(field: "Folder", width: Configuration.folderWidth, tool: ToolCatalog.getName))
+        }
+        if subtitleClipped {
+            notices.append(
+                Notice.clipped(field: "Subtitle", width: Configuration.subtitleWidth, tool: ToolCatalog.getName))
+        }
+        return ToolStandard.withNotices(notices, lines.joined(separator: "\n"))
     }
 
+    /// One shortcut's record, whole. The caller windows it.
     public func detail(_ shortcut: ShortcutRecord) -> String {
         let rows: [(String, String?)] = [
             ("folder", shortcut.folder ?? "(top level)"),
@@ -116,19 +154,26 @@ public struct Format: Sendable {
         return shortcut.name + "\n" + Self.block(rows) + "\n" + ceiling
     }
 
+    /// The sentence for output that was cut and can never be read again, because asking
+    /// again would run the shortcut again. `Notice` has no form for this yet; this is its
+    /// fixed wording, to be replaced by one.
+    static func unrepeatableCut(limit: Int, total: Int) -> String {
+        "Cut at \(limit) of \(total) characters; the rest cannot be read again."
+    }
+
     /// A run has to say what happened even when nothing came back, because "no output" and
     /// "output this server could not render" and "it failed" are three different facts and
     /// only the first two reach here.
     public func runResult(_ shortcut: ShortcutRecord, run: ShortcutRun, resultLimit: Int)
         -> String
     {
-        var text = "Ran '\(shortcut.name)'.\n"
+        let title = "Ran '\(ToolStandard.echo(shortcut.name))'.\n"
 
         guard run.hasResult else {
-            return text + "\nIt completed and returned no output."
+            return title + "\nIt completed and returned no output."
         }
         guard run.resultIsText else {
-            return text
+            return title
                 + """
 
                 It completed and returned a value with no textual form — an image, a file or
@@ -137,18 +182,15 @@ public struct Format: Sendable {
                 """
         }
 
-        let truncated = run.result.count > resultLimit
-        let body = truncated ? String(run.result.prefix(resultLimit)) : run.result
-        text += "\nOutput:\n" + body
-        if truncated {
-            text += """
-
-
-                …cut off at \(resultLimit) characters of \(run.result.count). The rest was
-                not returned; narrow what the shortcut outputs to get it.
-                """
+        // Rendered through `fitting`: an output of characters that take several UTF-16
+        // units each can still be too long at the configured limit.
+        let total = run.result.count
+        return ToolStandard.fitting(resultLimit) { size in
+            guard total > size else { return title + "\nOutput:\n" + run.result }
+            return ToolStandard.withNotices(
+                [Self.unrepeatableCut(limit: size, total: total)],
+                title + "\nOutput:\n" + String(run.result.prefix(size)))
         }
-        return text
     }
 
     public func status(
@@ -162,7 +204,7 @@ public struct Format: Sendable {
         case .consentNotGranted: headline = "Shortcuts automation: not settled yet."
         }
 
-        var text = headline + "\n\n"
+        var text = ToolStandard.withNotices(configuration.adjustments, headline + "\n\n")
         // The effective configuration, because a setting that silently failed to reach the
         // process is otherwise invisible: an unsubstituted manifest placeholder once became
         // the only allowed calendar in a sibling server, which hid every real one.

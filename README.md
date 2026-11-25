@@ -26,9 +26,31 @@ Not affiliated with or endorsed by Apple Inc.
 | Tool | Kind | What it does |
 |---|---|---|
 | `shortcuts_status` | read | Reports whether this server may control Shortcuts, and exactly what to enable if not. Asks macOS directly, without sending an Apple event, so it answers even when access is denied. |
-| `shortcuts_list` | read | Every shortcut this server can see: folder, whether it accepts input, action count. Filterable by `query` (name/subtitle) and `folder`, paged with `limit`/`offset`. |
-| `shortcut_get` | read | Full record for one shortcut, by `name` or `id`: name, id, subtitle, folder, whether it accepts input, action count. |
-| `run_shortcut` | **irreversible** | Runs one shortcut through Shortcuts Events, in the background, and returns whatever it outputs. |
+| `shortcuts_list` | read | The shortcuts this server can see, one page at a time ordered by name (ignoring case) then id: folder, whether it accepts input, action count. Filterable by `query` (name/subtitle) and `folder`, paged with `limit`/`offset`. |
+| `shortcut_get` | read | Full record for one shortcut, by `name` or `id`: name, id, subtitle, folder, whether it accepts input, action count. Read in windows with `character_offset`/`max_characters` when long. |
+| `run_shortcut` | **irreversible** | Runs one shortcut through Shortcuts Events, in the background, and returns what it outputs, up to a limit. |
+
+## Bounds
+
+Every result is bounded by `ToolStandard.swift`, and says in its first lines what it left
+out and the exact call that returns the rest.
+
+- `shortcuts_list` returns 40 shortcuts to a page, at most 100 (`limit`), skipping `offset`
+  shortcuts. Name, folder and subtitle are clipped to 80, 40 and 120 characters in a row;
+  the result says when one was, and `shortcut_get` reads one in full.
+- `shortcut_get` returns a record in windows of 10,000 characters by default, at most
+  20,000 (`max_characters`), starting `character_offset` characters in.
+- `run_shortcut` returns the first 4,000 characters of the output (at most 20,000 when the
+  binary is run by hand with `--result-limit`). The rest of a longer output **cannot be
+  read again**, because asking again would run the shortcut again; the first line says how
+  much was cut. Its `input` is at most 40,000 characters and is refused, never cut, when
+  longer.
+- A number outside its range is moved to the nearest allowed value and the first line says
+  which was used. An argument a tool does not take is refused with the names it takes.
+- Reading the library gives up after 30 seconds and fails, because a name resolved against
+  part of the library could miss a second shortcut of the same name. A call not finished
+  after 120 seconds is abandoned; for `run_shortcut` the error says the shortcut may have
+  run.
 
 ## Frameworks and APIs
 
@@ -86,7 +108,7 @@ error with `errOSAScriptError` (-1753). That is reported as the shortcut failing
 message Shortcuts gave, and with the warning that the actions before the failing one have
 already happened.
 
-**Output is text, capped at 4,000 characters, and truncation is reported.** A shortcut
+**Output is text, capped at 4,000 characters, and the cut is reported.** A shortcut
 whose result is an image or a file says that it produced one rather than pretending its
 contents fit in text. Only text can be sent as `input`, too — a file or an image cannot
 be passed in.
@@ -250,7 +272,7 @@ swift build
 swift test
 ```
 
-The tests (`ShortcutsToolsTests`, `ConfigurationTests`) run entirely against
+The tests (`ShortcutsToolsTests`, `BoundsTests`, `ConfigurationTests`) run entirely against
 an in-memory fake — nothing is run and nothing in the real Shortcuts library is
 touched. See `CLAUDE.md`, whose first section is the hard rule that makes that
 non-negotiable: no agent may run a shortcut that exists on this Mac.

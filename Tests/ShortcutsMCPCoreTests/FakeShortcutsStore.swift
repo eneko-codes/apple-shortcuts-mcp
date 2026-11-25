@@ -30,7 +30,18 @@ final class FakeShortcutsStore: ShortcutsStore, @unchecked Sendable {
 
     func availability() -> ShortcutsAvailability { state }
 
-    func shortcuts() async throws -> [ShortcutRecord] { library }
+    /// Set to make reading the library fail, as it does when the time budget runs out.
+    var libraryFailure: ToolError?
+    /// A pause before the library is answered, to drive a call past its deadline.
+    var libraryDelay: Duration?
+    private(set) var budgets: [Int] = []
+
+    func shortcuts(timeBudgetSeconds: Int) async throws -> [ShortcutRecord] {
+        budgets.append(timeBudgetSeconds)
+        if let libraryDelay { try await Task.sleep(for: libraryDelay) }
+        if let libraryFailure { throw libraryFailure }
+        return library
+    }
 
     func run(id: String, input: String?, timeoutSeconds: Int) async throws -> ShortcutRun {
         runs.append((id, input, timeoutSeconds))

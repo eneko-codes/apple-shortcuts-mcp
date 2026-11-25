@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "apple-shortcuts-mcp",
   "display_name": "Apple Shortcuts",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Run your Shortcuts from Claude, through the Shortcuts Events helper",
-  "long_description": "A local MCP server written in Swift that lets Claude list and run the shortcuts you have already built.\n\nIt goes through “Shortcuts Events”, the faceless helper app macOS ships for exactly this, so a shortcut runs in the background without the Shortcuts app taking over the screen, and its result comes straight back. Input is passed as a typed Apple event parameter, never spliced into a command line, so there is no text for a quote or an apostrophe to break.\n\nPlug and play: there is nothing to configure. The whole Shortcuts library is listable and runnable; the only guard is run_shortcut's own permission switch below — set it to \"ask\" to approve every run by hand, or \"prohibit\" to turn it off entirely.\n\nTwo things no API on macOS can do, so this server cannot either: enumerate the action library, and install a shortcut. Both are done by hand in the Shortcuts app.\n\nNot affiliated with or endorsed by Apple Inc.",
+  "long_description": "A local MCP server written in Swift that lets Claude list and run the shortcuts you have already built.\n\nIt goes through “Shortcuts Events”, the faceless helper app macOS ships for exactly this, so a shortcut runs in the background without the Shortcuts app taking over the screen, and its result comes straight back. Input is passed as a typed Apple event parameter, never spliced into a command line, so there is no text for a quote or an apostrophe to break.\n\nPlug and play: there is nothing to configure. The whole Shortcuts library is listable, in pages, and runnable; the only guard is run_shortcut's own permission switch below — set it to \"ask\" to approve every run by hand, or \"prohibit\" to turn it off entirely.\n\nTwo things no API on macOS can do, so this server cannot either: enumerate the action library, and install a shortcut. Both are done by hand in the Shortcuts app.\n\nNot affiliated with or endorsed by Apple Inc.",
   "author": {
     "name": "eneko-codes",
     "url": "https://github.com/eneko-codes"
@@ -38,15 +38,15 @@
     },
     {
       "name": "shortcuts_list",
-      "description": "Lists the shortcuts this server can see, with their folder, whether they take input, and how many actions each contains. Folders are named in the header, since they are the only grouping the…"
+      "description": "Lists the shortcuts this server can see, one page at a time ordered by name: folder, whether they take input, how many actions each contains and the id. Pass limit and offset for the other pages; long names, folders and subtitles are clipped and shortcut_get reads one in full."
     },
     {
       "name": "shortcut_get",
-      "description": "Returns everything stored about one shortcut: name, id, subtitle, folder, whether it accepts input, and how many actions it has."
+      "description": "Returns everything stored about one shortcut: name, id, subtitle, folder, whether it accepts input, and how many actions it has. A long record comes in windows, read with character_offset and max_characters."
     },
     {
       "name": "run_shortcut",
-      "description": "Runs one shortcut through Shortcuts Events — in the background, without opening the Shortcuts app — and returns whatever it outputs."
+      "description": "Runs one shortcut through Shortcuts Events — in the background, without opening the Shortcuts app — and returns what it outputs, up to a limit. The rest of a longer output cannot be read again, because asking again would run the shortcut again."
     }
   ],
   "compatibility": {
