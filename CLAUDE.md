@@ -14,7 +14,9 @@ Do not run an existing shortcut the owner made — its contents cannot be inspec
 
 ## What this is
 
-A local MCP server (Swift 6, stdio transport) that lists and runs the shortcuts already installed on this Mac, via Shortcuts Events. No network, no credential, no cloud API, gated by TCC consent for Apple events.
+A local MCP server (Swift 6, stdio transport) that lists and runs the shortcuts already installed on this Mac, via Shortcuts Events. No network, no credential, no cloud API, gated by TCC consent for Apple events, **no third-party dependency**: `Package.swift` lists none, and the MCP protocol (JSON-RPC over stdio) is `MCPServer.swift` over Foundation. Adding a package needs the owner's say-so.
+
+**`MCPServer.swift`, `Value.swift` and `Tests/…/MCPProtocolTests.swift` are copied unchanged into every one of the owner's MCP servers** (the test file differs only in its `@testable import`). A change to one is made to every copy in the same piece of work; never let a copy drift.
 
 ## Apple technology
 
